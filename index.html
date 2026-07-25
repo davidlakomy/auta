@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vozový park — ZažijAmeriku</title>
+<style>
+  :root{
+    --ink:#161a1d;
+    --panel:#1f2428;
+    --panel-2:#262c31;
+    --paper:#f3f1ec;
+    --line:#3a4046;
+    --line-light:#dcd8cf;
+    --amber:#d68a2c;
+    --amber-dim:#8a5c1e;
+    --ok:#3f7d5c;
+    --warn:#c47f18;
+    --bad:#b5442e;
+    --mono:'JetBrains Mono','Courier New',monospace;
+    --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  header{
+    background:var(--ink);color:var(--paper);
+    padding:22px 24px 18px;
+    position:sticky;top:0;z-index:20;
+    border-bottom:3px solid var(--amber);
+  }
+  header h1{
+    margin:0;font-size:20px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
+  }
+  header .sub{font-family:var(--mono);font-size:12px;color:#a9a29a;margin-top:4px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+  .btn{
+    font-family:var(--sans);font-size:13px;font-weight:600;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--paper);padding:9px 14px;border-radius:3px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--amber);}
+  .btn.primary{background:var(--amber);color:var(--ink);border-color:var(--amber);}
+  .btn.primary:hover{background:#c47a22;}
+  .btn.ghost{background:transparent;color:var(--paper);}
+  .btn.small{padding:5px 9px;font-size:12px;}
+  .btn.danger{color:#e7c3ba;border-color:var(--bad);}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  main{max-width:1200px;margin:0 auto;padding:20px 16px 80px;}
+
+  .summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+  .summary .pill{
+    font-family:var(--mono);font-size:12px;padding:8px 12px;border-radius:3px;
+    border:1px solid var(--line-light);background:#fff;
+  }
+  .pill.bad{border-color:var(--bad);color:var(--bad);background:#fbeae6;}
+  .pill.warn{border-color:var(--warn);color:#7a5210;background:#fbf1de;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+
+  .card{
+    background:#fff;border:1px solid var(--line-light);border-radius:5px;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .card.flag-bad{box-shadow:inset 4px 0 0 var(--bad);}
+  .card.flag-warn{box-shadow:inset 4px 0 0 var(--warn);}
+  .card-head{padding:14px 16px 10px;border-bottom:1px solid var(--line-light);}
+  .car-name{font-weight:700;font-size:16px;margin:0 0 4px;}
+  .plate{
+    display:inline-block;font-family:var(--mono);font-weight:700;letter-spacing:.06em;
+    background:var(--ink);color:#fff;padding:2px 8px;border-radius:2px;font-size:12.5px;
+  }
+  .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .tag{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:2px;border:1px solid var(--line-light);color:#555;}
+  .tag.diesel{border-color:#5b6b7a;color:#3d4a57;}
+  .tag.lpg{border-color:var(--ok);color:var(--ok);}
+
+  .card-body{padding:12px 16px;font-size:13px;flex:1;}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #e6e2d8;gap:10px;}
+  .row:last-child{border-bottom:none;}
+  .row .label{color:#666;}
+  .row .value{font-family:var(--mono);font-weight:600;text-align:right;}
+  .badge{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:2px;font-weight:700;}
+  .badge.ok{background:#e6f0ea;color:var(--ok);}
+  .badge.warn{background:#fbf1de;color:#7a5210;}
+  .badge.bad{background:#fbeae6;color:var(--bad);}
+
+  .card-foot{padding:10px 16px 14px;display:flex;gap:8px;border-top:1px solid var(--line-light);}
+  .card-foot .btn{flex:1;}
+
+  /* Detail / edit panel */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,20,18,.55);display:none;
+    align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:24px 12px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:#fff;max-width:640px;width:100%;border-radius:6px;overflow:hidden;
+    border:1px solid var(--line-light);
+  }
+  .modal-head{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;}
+  .modal-head h2{margin:0;font-size:16px;}
+  .modal-body{padding:18px 20px;max-height:70vh;overflow-y:auto;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666;margin-bottom:4px;font-weight:700;}
+  .field input, .field select{
+    width:100%;padding:8px 10px;border:1px solid var(--line-light);border-radius:3px;font-family:var(--sans);font-size:14px;background:#fbfaf7;
+  }
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .checks{display:flex;gap:16px;margin:10px 0 4px;}
+  .checks label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;}
+
+  table.hist{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px;}
+  table.hist th{text-align:left;font-size:10.5px;text-transform:uppercase;color:#888;padding:4px 6px;border-bottom:1px solid var(--line-light);}
+  table.hist td{padding:4px 6px;border-bottom:1px dashed #eee;}
+  table.hist td input{width:100%;border:none;background:transparent;font-family:var(--mono);font-size:12.5px;padding:3px;}
+  table.hist td input:focus{background:#fff8e8;outline:1px solid var(--amber);}
+  .hist-del{color:var(--bad);cursor:pointer;font-weight:700;border:none;background:none;font-size:14px;}
+  .add-row-btn{margin-top:8px;}
+
+  .modal-foot{padding:14px 20px;border-top:1px solid var(--line-light);display:flex;justify-content:space-between;gap:8px;}
+
+  footer{text-align:center;padding:20px;font-family:var(--mono);font-size:11px;color:#999;}
+
+  @media (max-width:520px){
+    header{padding:16px 14px;}
+    main{padding:16px 10px 60px;}
+    .grid{grid-template-columns:1fr;}
+    .field-row{flex-direction:column;gap:0;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div>
+      <h1>Vozový park</h1>
+      <div class="sub">STK · dálniční známky · servisní intervaly</div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost small" id="btnExport">Export JSON</button>
+      <button class="btn ghost small" id="btnImport">Import JSON</button>
+      <input type="file" id="fileImport" accept="application/json" style="display:none">
+      <button class="btn primary" id="btnAdd">+ Přidat vozidlo</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="summary" id="summary"></div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>Data se ukládají lokálně v tomto prohlížeči (localStorage). Pravidelně si dělejte zálohu přes „Export JSON“.</footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Vozidlo</h2>
+      <button class="btn ghost small" id="btnClose">Zavřít</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn danger" id="btnDelete">Smazat vozidlo</button>
+      <button class="btn primary" id="btnSave">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'fleet_data_v5';
+const DAY = 86400000;
+
+function uid(){ return 'v' + Math.random().toString(36).slice(2,9); }
+
+// ---------- seed data (best-effort přepis z tabulek, uprav dle potřeby) ----------
+// Do historie patří jen řádky se skutečným datem = opravdu proběhlá výměna.
+// Řádky bez data v původních tabulkách byly jen dopočítané plánované body
+// (podle starých/nesjednocených intervalů) — ty se nepřebírají, aplikace si
+// další servis počítá sama podle sjednoceného intervalu (15 000 / 10 000 km).
+// fuel: 'diesel' (15 000 km) | 'benzin' (10 000 km) | 'benzin_lpg' (10 000 km, LPG filtr při každé výměně)
+const seed = [
+  mk('Passat B8 (polep)','2TP 3556','2027-07-21','2026-08-23','diesel',168000,[
+    ['2026-07-18',168000,'olej a filtry']
+  ]),
+  mk('Seat Mii černý','2TT 1734','2027-02-18','','benzin',111000,[
+    ['2025-02-19',111000,'olej a filtry']
+  ]),
+  mk('Škoda Citigo černý','2TT 1987','2027-03-17','','benzin_lpg',65500,[
+    ['2025-03-19',65500,'olej a filtry']
+  ]),
+  mk('Octavia 3 stříbrná','2TV 2768','2027-09-30','','benzin',132500,[
+    ['2025-10-02',132500,'olej a filtry']
+  ]),
+  mk('Seat Mii bílý','2TT 1660','2027-02-03','','benzin_lpg',80000,[
+    ['2025-02-03',80000,'olej a filtry']
+  ]),
+  mk('VW Up! černý','2TT 1556','2027-02-05','','benzin',119000,[
+    ['2025-02-17',88000,'olej a filtry'],
+    ['2025-05-20',98000,'olej a filtry'],
+    ['2025-08-18',108000,'olej a filtry'],
+    ['2025-11-24',119000,'olej a filtry']
+  ]),
+  mk('Škoda Citigo stříbrný','2TT 1783','2027-03-03','','benzin_lpg',106000,[
+    ['2025-03-03',96000,'olej a filtry'],
+    ['2025-10-20',106000,'olej a filtry']
+  ]),
+  mk('Škoda Rapid červený','2TV 2863','2027-10-20','','benzin_lpg',113500,[
+    ['2025-10-20',113500,'olej a filtry + rozvody']
+  ]),
+  mk('VW Passat 1.6 TDI','2TV 3141','2027-11-10','2027-01-13','diesel',198000,[
+    ['2025-11-10',198000,'olej a filtry + rozvody']
+  ]),
+  mk('Škoda Fabia','2TV 3228','2028-01-06','','benzin_lpg',176000,[
+    ['2026-02-10',176000,'olej a filtry + filtr LPG']
+  ]),
+  mk('Škoda Octavia 3','2TY 7593','2028-02-26','2027-06-02','diesel',null,[
+    ['2026-05-02',null,'olej a filtry']
+  ]),
+  mk('Škoda Superb 2','1UF 0842','2028-02-25','2027-06-28','diesel',396000,[
+    ['2026-05-02',396000,'olej a filtry']
+  ])
+];
+
+// doplněno ručně tam, kde bylo v tabulkách napsáno "rozvody"
+seedRozvody('Škoda Rapid červený', 113500, '2025-10-20');
+seedRozvody('VW Passat 1.6 TDI', 198000, '2025-11-10');
+seedRozvody('Octavia 3 stříbrná', 146000, '2026-03-25');
+seedRozvody('Passat B8 (polep)', 165000, '2026-05-25');
+
+function seedRozvody(name, km, date){
+  const c = seed.find(c=>c.name===name);
+  if(c) c.rozvody = {lastKm:km, lastDate:date};
+}
+
+function mk(name,rz,stk,dalnice,fuel,currentKm,history){
+  return {id:uid(),name,rz,stk,dalnice,fuel,currentKm,rozvody:{lastKm:null,lastDate:''},
+    history:history.map(h=>({date:h[0],km:h[1],note:h[2]}))};
+}
+
+// ---------- data load/save ----------
+let cars = loadData();
+function loadData(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ return JSON.parse(raw); }catch(e){ /* fall through */ } }
+  return seed;
+}
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cars));
+}
+
+// ---------- helpers ----------
+function interval(fuel){ return fuel === 'diesel' ? 15000 : 10000; } // benzin i benzin_lpg = 10 000 km
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr+'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((d - today)/DAY);
+}
+function fmtDate(dateStr){
+  if(!dateStr) return '—';
+  const [y,m,d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
+}
+function statusFromDays(d, warnDays){
+  if(d === null) return 'ok';
+  if(d < 0) return 'bad';
+  if(d <= warnDays) return 'warn';
+  return 'ok';
+}
+function lastServiceKm(car){
+  const kms = car.history.map(h=>h.km).filter(k=>k !== null && k !== '' && !isNaN(k));
+  if(!kms.length) return null;
+  return Math.max(...kms);
+}
+function serviceStatus(car){
+  const last = lastServiceKm(car);
+  if(last === null || car.currentKm === null || car.currentKm === '') return {status:'unknown', remaining:null, due:null};
+  const due = last + interval(car.fuel);
+  const remaining = due - Number(car.currentKm);
+  let status = 'ok';
+  if(remaining < 0) status = 'bad';
+  else if(remaining <= 1500) status = 'warn';
+  return {status, remaining, due};
+}
+// Rozvody: interval 100 000 km NEBO 5 let, podle toho co nastane dřív.
+function rozvodyStatus(car){
+  const r = car.rozvody;
+  if(!r || (!r.lastKm && !r.lastDate)) return {status:'none'};
+  let kmRemaining = null, dueKm = null, dueDate = null, dateDays = null;
+  if(r.lastKm !== null && r.lastKm !== ''){
+    dueKm = Number(r.lastKm) + 100000;
+    if(car.currentKm !== null && car.currentKm !== '') kmRemaining = dueKm - Number(car.currentKm);
+  }
+  if(r.lastDate){
+    const d = new Date(r.lastDate+'T00:00:00');
+    d.setFullYear(d.getFullYear()+5);
+    dueDate = d.toISOString().slice(0,10);
+    dateDays = daysUntil(dueDate);
+  }
+  const kmStatus = kmRemaining === null ? null : (kmRemaining < 0 ? 'bad' : kmRemaining <= 5000 ? 'warn' : 'ok');
+  const dateStatus = dateDays === null ? null : statusFromDays(dateDays, 60);
+  let status = 'ok';
+  if(kmStatus === 'bad' || dateStatus === 'bad') status = 'bad';
+  else if(kmStatus === 'warn' || dateStatus === 'warn') status = 'warn';
+  else if(kmStatus === null && dateStatus === null) status = 'none';
+  return {status, dueKm, dueDate, kmRemaining, dateDays};
+}
+
+// ---------- render ----------
+function render(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  let badCount = 0, warnCount = 0;
+
+  cars.forEach(car=>{
+    const stkDays = daysUntil(car.stk);
+    const stkStatus = statusFromDays(stkDays, 30);
+    const dalDays = daysUntil(car.dalnice);
+    const dalStatus = statusFromDays(dalDays, 14);
+    const svc = serviceStatus(car);
+    const rzv = rozvodyStatus(car);
+
+    const worst = [stkStatus, car.dalnice ? dalStatus : 'ok', svc.status === 'unknown' ? 'ok' : svc.status, rzv.status === 'none' ? 'ok' : rzv.status];
+    const cardFlag = worst.includes('bad') ? 'flag-bad' : (worst.includes('warn') ? 'flag-warn' : '');
+    if(worst.includes('bad')) badCount++; else if(worst.includes('warn')) warnCount++;
+
+    const card = document.createElement('div');
+    card.className = 'card ' + cardFlag;
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="car-name">${esc(car.name)}</div>
+        <span class="plate">${esc(car.rz)}</span>
+        <div class="tags">
+          <span class="tag ${car.fuel === 'diesel' ? 'diesel' : ''}">${car.fuel === 'diesel' ? 'Diesel · 15 000 km' : 'Benzín · 10 000 km'}</span>
+          ${car.fuel === 'benzin_lpg' ? '<span class="tag lpg">LPG</span>' : ''}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <span class="label">STK do</span>
+          <span class="value">${fmtDate(car.stk)} ${badge(stkStatus, stkDays)}</span>
+        </div>
+        <div class="row">
+          <span class="label">Dálniční známka</span>
+          <span class="value">${car.dalnice ? fmtDate(car.dalnice)+' '+badge(dalStatus, dalDays) : '—'}</span>
+        </div>
+        <div class="row">
+          <span class="label">Aktuální nájezd</span>
+          <span class="value">${car.currentKm !== null && car.currentKm !== '' ? Number(car.currentKm).toLocaleString('cs-CZ')+' km' : '—'}</span>
+        </div>
+        <div class="row">
+          <span class="label">Příští servis</span>
+          <span class="value">${svc.due !== null ? svc.due.toLocaleString('cs-CZ')+' km ' + serviceBadge(svc) : 'doplňte nájezd'}</span>
+        </div>
+        <div class="row">
+          <span class="label">Rozvody</span>
+          <span class="value">${rozvodyValue(rzv)}</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn small" data-edit="${car.id}">Upravit</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openModal(btn.dataset.edit));
+  });
+
+  const summary = document.getElementById('summary');
+  summary.innerHTML = `
+    <span class="pill">${cars.length} vozidel celkem</span>
+    ${badCount ? `<span class="pill bad">${badCount} vyžaduje pozornost hned</span>` : ''}
+    ${warnCount ? `<span class="pill warn">${warnCount} se blíží termín</span>` : ''}
+  `;
+}
+
+function badge(status, days){
+  if(days === null) return '';
+  if(status === 'bad') return `<span class="badge bad">${days < 0 ? 'PROŠLO před '+Math.abs(days)+' dny' : 'dnes/zítra'}</span>`;
+  if(status === 'warn') return `<span class="badge warn">za ${days} dní</span>`;
+  return `<span class="badge ok">za ${days} dní</span>`;
+}
+function serviceBadge(svc){
+  if(svc.status === 'bad') return `<span class="badge bad">PŘETAŽENO o ${Math.abs(svc.remaining).toLocaleString('cs-CZ')} km</span>`;
+  if(svc.status === 'warn') return `<span class="badge warn">zbývá ${svc.remaining.toLocaleString('cs-CZ')} km</span>`;
+  return `<span class="badge ok">zbývá ${svc.remaining.toLocaleString('cs-CZ')} km</span>`;
+}
+function rozvodyValue(rzv){
+  if(rzv.status === 'none') return 'nesledováno';
+  const parts = [];
+  if(rzv.dueKm !== null) parts.push(rzv.dueKm.toLocaleString('cs-CZ')+' km');
+  if(rzv.dueDate) parts.push(fmtDate(rzv.dueDate));
+  const label = rzv.status === 'bad' ? 'PROŠLO / DOJÍŽDÍ' : rzv.status === 'warn' ? 'BLÍŽÍ SE' : 'OK';
+  const cls = rzv.status;
+  return `${parts.join(' / ')} <span class="badge ${cls}">${label}</span>`;
+}
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---------- modal / edit ----------
+let editingId = null;
+const overlay = document.getElementById('overlay');
+const modalBody = document.getElementById('modalBody');
+
+function openModal(id){
+  editingId = id;
+  const car = id === 'new' ? {id:null,name:'',rz:'',stk:'',dalnice:'',fuel:'benzin',currentKm:'',rozvody:{lastKm:null,lastDate:''},history:[]} : cars.find(c=>c.id===id);
+  const rzv = car.rozvody || {lastKm:null,lastDate:''};
+  document.getElementById('modalTitle').textContent = id === 'new' ? 'Nové vozidlo' : car.name;
+  document.getElementById('btnDelete').style.display = id === 'new' ? 'none' : 'inline-block';
+
+  modalBody.innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>Název vozidla</label><input id="f-name" value="${esc(car.name)}" placeholder="např. Škoda Octavia 3"></div>
+      <div class="field"><label>RZ</label><input id="f-rz" value="${esc(car.rz)}" placeholder="2TP 3556"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>STK platná do</label><input type="date" id="f-stk" value="${car.stk||''}"></div>
+      <div class="field"><label>Dálniční známka do</label><input type="date" id="f-dalnice" value="${car.dalnice||''}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Palivo</label>
+        <select id="f-fuel">
+          <option value="benzin" ${car.fuel==='benzin'?'selected':''}>Benzín (interval 10 000 km)</option>
+          <option value="benzin_lpg" ${car.fuel==='benzin_lpg'?'selected':''}>Benzín + LPG (interval 10 000 km, LPG filtr obvýměnu)</option>
+          <option value="diesel" ${car.fuel==='diesel'?'selected':''}>Diesel (interval 15 000 km)</option>
+        </select>
+      </div>
+      <div class="field"><label>Aktuální nájezd (km)</label><input type="number" id="f-km" value="${car.currentKm===null?'':car.currentKm}" placeholder="doplní se automaticky podle historie"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Rozvody — poslední výměna (km)</label><input type="number" id="f-rozvody-km" value="${rzv.lastKm===null||rzv.lastKm===undefined?'':rzv.lastKm}" placeholder="nepovinné"></div>
+      <div class="field"><label>Rozvody — poslední výměna (datum)</label><input type="date" id="f-rozvody-date" value="${rzv.lastDate||''}"></div>
+    </div>
+    <div style="font-size:11px;color:#888;margin:-6px 0 12px;">Interval rozvodů: 100 000 km nebo 5 let, podle toho co nastane dřív. Nechte prázdné, pokud se u vozu netýká.</div>
+
+    <h3 style="margin:16px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#666;">Servisní historie</h3>
+    <table class="hist" id="histTable">
+      <thead><tr><th>Datum</th><th>Nájezd (km)</th><th>Servis</th><th></th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table>
+    <button class="btn small add-row-btn" id="btnAddRow">+ Přidat záznam</button>
+    <div style="font-size:11px;color:#888;margin-top:6px;">Nájezd u nového záznamu se automaticky promítne do „Aktuální nájezd“. U vozů s LPG se filtr LPG doplní automaticky obvýměnu.</div>
+  `;
+
+  renderHistRows(car.history || []);
+  document.getElementById('btnAddRow').addEventListener('click', ()=>{
+    const fuel = document.getElementById('f-fuel').value;
+    const count = document.querySelectorAll('#histBody tr').length;
+    let note = 'olej a filtry';
+    if(fuel === 'benzin_lpg' && count % 2 === 1) note += ' + filtr LPG';
+    addHistRow({date:'',km:'',note});
+  });
+  document.getElementById('histBody').addEventListener('input', e=>{
+    if(e.target.classList.contains('h-km')) syncCurrentKmFromHistory();
+  });
+
+  overlay.classList.add('open');
+}
+
+function syncCurrentKmFromHistory(){
+  const kms = [...document.querySelectorAll('#histBody .h-km')].map(i=>i.value).filter(v=>v!=='').map(Number).filter(n=>!isNaN(n));
+  if(kms.length){
+    document.getElementById('f-km').value = Math.max(...kms);
+  }
+}
+
+function renderHistRows(history){
+  const body = document.getElementById('histBody');
+  body.innerHTML = '';
+  history.forEach(h=> addHistRow(h));
+}
+function addHistRow(h){
+  const body = document.getElementById('histBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="date" class="h-date" value="${h.date||''}"></td>
+    <td><input type="number" class="h-km" value="${h.km===null?'':h.km}" placeholder="km"></td>
+    <td><input type="text" class="h-note" value="${esc(h.note||'')}" placeholder="olej a filtry"></td>
+    <td><button class="hist-del" title="smazat záznam">✕</button></td>
+  `;
+  tr.querySelector('.hist-del').addEventListener('click', ()=>{ tr.remove(); syncCurrentKmFromHistory(); });
+  body.appendChild(tr);
+  syncCurrentKmFromHistory();
+}
+
+document.getElementById('btnAdd').addEventListener('click', ()=> openModal('new'));
+document.getElementById('btnClose').addEventListener('click', closeModal);
+overlay.addEventListener('click', e=>{ if(e.target === overlay) closeModal(); });
+function closeModal(){ overlay.classList.remove('open'); editingId = null; }
+
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const name = document.getElementById('f-name').value.trim();
+  const rz = document.getElementById('f-rz').value.trim();
+  const stk = document.getElementById('f-stk').value;
+  const dalnice = document.getElementById('f-dalnice').value;
+  const fuel = document.getElementById('f-fuel').value;
+  const kmVal = document.getElementById('f-km').value;
+  const currentKm = kmVal === '' ? null : Number(kmVal);
+
+  if(!name){ alert('Zadejte název vozidla.'); return; }
+
+  const history = [...document.querySelectorAll('#histBody tr')].map(tr=>{
+    const km = tr.querySelector('.h-km').value;
+    return {
+      date: tr.querySelector('.h-date').value,
+      km: km === '' ? null : Number(km),
+      note: tr.querySelector('.h-note').value.trim()
+    };
+  }).filter(h=> h.date || h.km !== null || h.note);
+
+  const rozvodyKmVal = document.getElementById('f-rozvody-km').value;
+  const rozvody = {
+    lastKm: rozvodyKmVal === '' ? null : Number(rozvodyKmVal),
+    lastDate: document.getElementById('f-rozvody-date').value
+  };
+
+  // aktuální nájezd se odvozuje automaticky z nejvyššího km v historii, pokud tam nějaké je
+  const histKms = history.map(h=>h.km).filter(k=>k !== null && !isNaN(k));
+  const finalKm = histKms.length ? Math.max(...histKms) : currentKm;
+
+  if(editingId === 'new'){
+    cars.push({id:uid(),name,rz,stk,dalnice,fuel,currentKm:finalKm,rozvody,history});
+  } else {
+    const car = cars.find(c=>c.id===editingId);
+    Object.assign(car,{name,rz,stk,dalnice,fuel,currentKm:finalKm,rozvody,history});
+  }
+  saveData();
+  closeModal();
+  render();
+});
+
+document.getElementById('btnDelete').addEventListener('click', ()=>{
+  if(!confirm('Opravdu smazat toto vozidlo?')) return;
+  cars = cars.filter(c=>c.id!==editingId);
+  saveData();
+  closeModal();
+  render();
+});
+
+// ---------- export / import ----------
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(cars,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vozovy-park-zaloha-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+});
+document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileImport').click());
+document.getElementById('fileImport').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data)) throw new Error('neplatný formát');
+      if(!confirm('Import nahradí aktuální data v tomto prohlížeči. Pokračovat?')) return;
+      cars = data;
+      saveData();
+      render();
+    }catch(err){
+      alert('Soubor se nepodařilo načíst: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+render();
+</script>
+</body>
+</html>
